@@ -1,6 +1,6 @@
 # Linux runner architecture standard
 
-Status: staged rollout. No organization runner variable or paid budget change is implied by this document.
+Status: organization preference approved November 19, 2026. ARM64 is the target default for compatible Linux jobs. Repository adoption and hosted validation remain in progress. This document does not modify organization settings or billing.
 
 ## Intent
 
@@ -10,15 +10,15 @@ This is an operating-system architecture preference, **not** a mandate to move e
 
 ## Shared setting
 
-Use organization Actions variable `LF_LINUX_RUNNER` for jobs that have passed the ARM64 compatibility gate. During preparation, set it to `ubuntu-24.04` to preserve today's behavior. After validation, change it to `ubuntu-24.04-arm`.
+Use organization Actions variable `LF_LINUX_RUNNER` with the chosen value `ubuntu-24.04-arm` for compatible Linux jobs. Its actual presence and value must be verified by an organization owner; GitHub repository access cannot confirm organization variable settings. Jobs requiring x64 or macOS must use explicit runner labels.
 
 In eligible jobs, use:
 
 ```yaml
-runs-on: ${{ vars.LF_LINUX_RUNNER || 'ubuntu-24.04' }}
+runs-on: ${{ vars.LF_LINUX_RUNNER || 'ubuntu-24.04-arm' }}
 ```
 
-The fallback prevents an unset variable from silently activating unvalidated ARM64 jobs. Configuration variables cannot override a workflow's literal `runs-on`; workflows must opt in to the variable. Keep jobs with documented exceptions on explicit labels.
+The fallback makes ARM64 the default even when the variable is not yet configured. **Only use this expression for jobs known to be compatible or explicitly undergoing an ARM64 pilot.** Configuration variables cannot override a workflow's literal `runs-on`; workflows must opt in. Leave documented x64 and macOS exceptions on explicit labels.
 
 An organization owner must create and scope this variable in **Organization Settings > Secrets and variables > Actions > Variables**. This document and its PR do not create that setting.
 
@@ -32,7 +32,13 @@ Use isolated, non-deploying PR validation jobs in these private repositories:
 * `ghostnote-levels-content`: `pr-validate.yml` only; do not change publishing
 * `donations-api`: `validation.yml` only; Wrangler dry runs must not deploy
 
-The first pilot PRs explicitly select `ubuntu-24.04-arm` to establish actual compatibility. Once they pass, migrate those jobs to the shared variable above. Avoid introducing variable-based defaults across the other repos until this evidence exists.
+Five initial pilot PRs were merged November 19: [steam-ci #1](https://github.com/Labyrinth-Foundation/steam-ci/pull/1), [research #2](https://github.com/Labyrinth-Foundation/research/pull/2), [levels backend #1](https://github.com/Labyrinth-Foundation/ghostnote-levels-backend/pull/1), [levels content #1](https://github.com/Labyrinth-Foundation/ghostnote-levels-content/pull/1), and [donations API #12](https://github.com/Labyrinth-Foundation/donations-api/pull/12). Their runner selectors were verified on `main` but their ARM64 execution has **not** been validated because hosted Actions are blocked by the exhausted allowance. Preserve their checks and verify when capacity returns.
+
+## Slim runner exceptions
+
+GitHub provides `ubuntu-slim` on x64 only, with one CPU, 5 GB memory, unprivileged container execution and a 15-minute job limit. It should be selected explicitly for short, non-privileged automation, not substituted as an organization-wide default.
+
+Best website candidates: Dependabot metadata and auto-merge request, Slack notifications, deployment notification, browser-result aggregation, and validation-scope orchestration. Review the security implications of `pull_request_target` jobs, preserve required check names, and verify available GitHub CLI, Node, git and artifact action support. Do not move the actual Playwright containers, browser tests, visual baselines, or game builds to slim. Compare actual runtime and costs after the November Actions hold lifts.
 
 ## Follow-up candidates
 
